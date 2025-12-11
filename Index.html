@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌌 El Universo de Kate 💫</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: radial-gradient(ellipse at bottom, #0d1b2a 0%, #000000 100%);
+      font-family: 'Poppins', sans-serif;
+    }
+
+    #overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-align: center;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.7);
+      transition: opacity 1s ease;
+    }
+
+    #overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    button {
+      background: linear-gradient(90deg, #ff9ff3, #feca57);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 9999px;
+      font-weight: bold;
+      margin-top: 20px;
+      box-shadow: 0 0 10px #fff4;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px #fff8;
+    }
+
+    .infoBox {
+      position: absolute;
+      bottom: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 20px;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 500px;
+      color: #fff;
+      display: none;
+    }
+
+    .infoBox.active {
+      display: block;
+      animation: fadeIn 1s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, 20px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Pantalla de bienvenida -->
+  <div id="overlay">
+    <h1 class="text-4xl md:text-6xl font-bold mb-4">✨ El Universo de Kate ✨</h1>
+    <p class="text-lg md:text-xl">Cada planeta aquí guarda un pedacito de nuestra historia 💞</p>
+    <button id="startBtn">Explorar mi universo contigo 💫</button>
+  </div>
+
+  <!-- Contenedor del universo -->
+  <canvas id="universe"></canvas>
+
+  <!-- Información de planetas -->
+  <div id="infoRecuerdos" class="infoBox">
+    <h2 class="text-2xl font-bold mb-2">🌹 Planeta Recuerdos</h2>
+    <p>“Cada risa, cada mirada, cada momento contigo se quedó orbitando en mi corazón.”</p>
+  </div>
+
+  <div id="infoDeseos" class="infoBox">
+    <h2 class="text-2xl font-bold mb-2">🌙 Planeta Deseos</h2>
+    <p>“Mi deseo es que la vida siempre te encuentre sonriendo… y ojalá, también conmigo.”</p>
+  </div>
+
+  <div id="infoMensaje" class="infoBox">
+    <h2 class="text-2xl font-bold mb-2">💌 Mensaje del Corazón</h2>
+    <p>“Gracias por existir. Este universo solo tiene sentido porque tú estás en él.”</p>
+  </div>
+
+  <div id="infoSorpresa" class="infoBox">
+    <h2 class="text-2xl font-bold mb-2">🎁 Sorpresa Final</h2>
+    <p>“Feliz cumpleaños, Kate 💞 Este universo lo hice solo porque tú fuiste mi mejor historia.”</p>
+  </div>
+
+  <script>
+    let scene, camera, renderer;
+    let planets = [];
+    let raycaster, mouse = new THREE.Vector2();
+    let infoBoxes = {
+      Recuerdos: document.getElementById('infoRecuerdos'),
+      Deseos: document.getElementById('infoDeseos'),
+      Mensaje: document.getElementById('infoMensaje'),
+      Sorpresa: document.getElementById('infoSorpresa')
+    };
+
+    const overlay = document.getElementById('overlay');
+    const startBtn = document.getElementById('startBtn');
+
+    startBtn.addEventListener('click', () => {
+      overlay.classList.add('hidden');
+      setTimeout(() => overlay.remove(), 1000);
+      init();
+      animate();
+    });
+
+    function init() {
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('universe'), antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+
+      // Fondo estrellado
+      const starGeometry = new THREE.BufferGeometry();
+      const starCount = 1500;
+      const starPositions = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount * 3; i++) starPositions[i] = (Math.random() - 0.5) * 2000;
+      starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+      const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1 });
+      const stars = new THREE.Points(starGeometry, starMaterial);
+      scene.add(stars);
+
+      // Luz suave
+      const ambient = new THREE.AmbientLight(0xffffff, 1);
+      scene.add(ambient);
+
+      // Crear planetas
+      const planetData = [
+        { name: "Recuerdos", color: 0xff6699, x: -50, y: 10, size: 8 },
+        { name: "Deseos", color: 0x99ccff, x: 30, y: -15, size: 6 },
+        { name: "Mensaje", color: 0xffcc99, x: -10, y: -30, size: 7 },
+        { name: "Sorpresa", color: 0xcc99ff, x: 60, y: 20, size: 5 }
+      ];
+
+      const geometry = new THREE.SphereGeometry(5, 32, 32);
+
+      planetData.forEach(data => {
+        const material = new THREE.MeshStandardMaterial({
+          color: data.color,
+          emissive: data.color,
+          emissiveIntensity: 0.3,
+          roughness: 0.5
+        });
+        const planet = new THREE.Mesh(geometry.clone().scale(data.size / 5, data.size / 5, data.size / 5), material);
+        planet.position.set(data.x, data.y, -100);
+        planet.userData = { name: data.name };
+        scene.add(planet);
+        planets.push(planet);
+      });
+
+      // Cámara inicial
+      camera.position.z = 0;
+      gsap.to(camera.position, { z: 150, duration: 3, ease: "power2.out" });
+
+      raycaster = new THREE.Raycaster();
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('click', onClick);
+      window.addEventListener('resize', onWindowResize);
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function onMouseMove(event) {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    }
+
+    function onClick() {
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(planets);
+      if (intersects.length > 0) {
+        const planet = intersects[0].object.userData.name;
+        showInfo(planet);
+        gsap.to(camera.position, {
+          x: intersects[0].object.position.x,
+          y: intersects[0].object.position.y,
+          z: 40,
+          duration: 1.5,
+          ease: "power2.out"
+        });
+      }
+    }
+
+    function showInfo(name) {
+      Object.values(infoBoxes).forEach(box => box.classList.remove('active'));
+      infoBoxes[name].classList.add('active');
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      planets.forEach((planet, i) => {
+        planet.rotation.y += 0.005;
+        planet.position.x += Math.sin(Date.now() * 0.001 + i) * 0.01;
+      });
+      renderer.render(scene, camera);
+    }
+  </script>
+</body>
+</html>
